@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Connection, PublicKey, TransactionMessage, VersionedTransaction } from '@solana/web3.js';
+import { PublicKey, TransactionMessage, VersionedTransaction } from '@solana/web3.js';
 import { Button } from './ui/button';
 import { formatTransactionError } from '@/lib/utils';
 import * as multisig from '@sqds/multisig';
@@ -12,6 +12,15 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useMultisigData } from '../hooks/useMultisigData';
 import { buildProposalIx } from '../lib/multisigUtils';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from './ui/dialog';
+import TransactionNoteInput from './TransactionNoteInput';
 
 type RemoveMemberButtonProps = {
   multisigPda: string;
@@ -35,13 +44,17 @@ const RemoveMemberButton = ({
   const { connection } = useMultisigData();
   const signatureRef = useRef<string>('');
   const [isPending, setIsPending] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [note, setNote] = useState('');
 
   const removeMember = async () => {
     if (!wallet.publicKey) {
       walletModal.setVisible(true);
       throw 'Wallet not connected';
     }
-    let bigIntTransactionIndex = BigInt(transactionIndex);
+
+    const bigIntTransactionIndex = BigInt(transactionIndex);
+    const resolvedProgramId = programId ? new PublicKey(programId) : multisig.PROGRAM_ID;
 
     const removeMemberIx = multisig.instructions.configTransactionCreate({
       multisigPda: new PublicKey(multisigPda),
@@ -54,13 +67,14 @@ const RemoveMemberButton = ({
       creator: wallet.publicKey,
       transactionIndex: bigIntTransactionIndex,
       rentPayer: wallet.publicKey,
-      programId: programId ? new PublicKey(programId) : multisig.PROGRAM_ID,
+      memo: note.trim() || undefined,
+      programId: resolvedProgramId,
     });
     const proposalIx = buildProposalIx(
       new PublicKey(multisigPda),
       wallet.publicKey,
       bigIntTransactionIndex,
-      programId ? new PublicKey(programId) : multisig.PROGRAM_ID
+      resolvedProgramId
     );
 
     const message = new TransactionMessage({
@@ -86,33 +100,55 @@ const RemoveMemberButton = ({
     if (!confirmed) {
       throw `Transaction failed or timed out. Check ${signature}`;
     }
+
     toast.success(`Remove member action proposed. (${signature})`, { id: 'transaction' });
+    setNote('');
+    setIsOpen(false);
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['transactions'] }),
       queryClient.invalidateQueries({ queryKey: ['multisig'] }),
     ]);
     navigate('/transactions');
   };
+
   return (
-    <Button
-      size="sm"
-      disabled={!isMember || isPending}
-      onClick={async () => {
-        setIsPending(true);
-        try {
-          await removeMember();
-        } catch (e) {
-          toast.error(
-            `Failed to propose: ${formatTransactionError(e)}${signatureRef.current ? ` (${signatureRef.current})` : ''}`,
-            { id: 'transaction' }
-          );
-        } finally {
-          setIsPending(false);
-        }
-      }}
-    >
-      Remove
-    </Button>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" disabled={!isMember || isPending}>
+          Remove
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Remove Member</DialogTitle>
+          <DialogDescription>Propose removing {memberKey} from the multisig.</DialogDescription>
+        </DialogHeader>
+        <TransactionNoteInput
+          id="remove-member-note"
+          value={note}
+          onChange={setNote}
+          description="Optional note/memo to include with the remove-member proposal."
+        />
+        <Button
+          disabled={isPending}
+          onClick={async () => {
+            setIsPending(true);
+            try {
+              await removeMember();
+            } catch (e) {
+              toast.error(
+                `Failed to propose: ${formatTransactionError(e)}${signatureRef.current ? ` (${signatureRef.current})` : ''}`,
+                { id: 'transaction' }
+              );
+            } finally {
+              setIsPending(false);
+            }
+          }}
+        >
+          Confirm Remove
+        </Button>
+      </DialogContent>
+    </Dialog>
   );
 };
 

@@ -4,29 +4,44 @@ import {
   Connection,
   PublicKey,
   TransactionMessage,
-  VersionedMessage,
   VersionedTransaction,
 } from '@solana/web3.js';
 import { decodeAndDeserialize } from './decodeAndDeserialize';
 import { WalletContextState } from '@solana/wallet-adapter-react';
 import { toast } from 'sonner';
-import { loadLookupTables } from './getAccountsForSimulation';
 import { waitForConfirmation } from '~/lib/transactionConfirmation';
 import { buildProposalIx } from '~/lib/multisigUtils';
 
-export const importTransaction = async (
-  tx: string,
-  connection: Connection,
-  multisigPda: string,
-  programId: string,
-  vaultIndex: number,
-  wallet: WalletContextState
-) => {
+export const importTransaction = async ({
+  tx,
+  connection,
+  multisigPda,
+  programId,
+  vaultIndex,
+  wallet,
+  ephemeralSigners,
+  additionalLookupTableAddresses = [],
+  memo,
+}: {
+  tx: string;
+  connection: Connection;
+  multisigPda: string;
+  programId: string;
+  vaultIndex: number;
+  wallet: WalletContextState;
+  ephemeralSigners: number;
+  additionalLookupTableAddresses?: PublicKey[];
+  memo?: string;
+}) => {
   if (!wallet.publicKey) {
     throw 'Please connect your wallet.';
   }
   try {
-    const { message, version } = decodeAndDeserialize(tx);
+    const { message, addressLookupTableAccounts } = await decodeAndDeserialize({
+      tx,
+      connection,
+      additionalLookupTableAddresses,
+    });
 
     const multisigInfo = await multisig.accounts.Multisig.fromAccountAddress(
       connection,
@@ -35,11 +50,6 @@ export const importTransaction = async (
 
     const transactionMessage = new TransactionMessage(message);
 
-    const addressLookupTableAccounts =
-      version === 0
-        ? await loadLookupTables(connection, transactionMessage.compileToV0Message())
-        : [];
-
     const transactionIndex = Number(multisigInfo.transactionIndex) + 1;
     const transactionIndexBN = BigInt(transactionIndex);
 
@@ -47,10 +57,11 @@ export const importTransaction = async (
     const multisigTransactionIx = multisig.instructions.vaultTransactionCreate({
       multisigPda: new PublicKey(multisigPda),
       creator: wallet.publicKey,
-      ephemeralSigners: 0,
+      ephemeralSigners,
       transactionMessage: transactionMessage,
       transactionIndex: transactionIndexBN,
       addressLookupTableAccounts,
+      memo,
       rentPayer: wallet.publicKey,
       vaultIndex: vaultIndex,
       programId: resolvedProgramId,

@@ -2,7 +2,7 @@ import { Button } from './ui/button';
 import { formatTransactionError } from '@/lib/utils';
 import { Input } from './ui/input';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { useState, useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import * as multisig from '@sqds/multisig';
 import { PublicKey, TransactionMessage, VersionedTransaction } from '@solana/web3.js';
@@ -17,6 +17,7 @@ import { waitForConfirmation } from '../lib/transactionConfirmation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { buildProposalIx } from '@/lib/multisigUtils';
+import TransactionNoteInput from './TransactionNoteInput';
 
 type AddMemberInputProps = {
   multisigPda: string;
@@ -33,6 +34,7 @@ const PERMISSIONS = [
 const AddMemberInput = ({ multisigPda, transactionIndex, programId }: AddMemberInputProps) => {
   const [member, setMember] = useState('');
   const [permMask, setPermMask] = useState(7);
+  const [note, setNote] = useState('');
   const wallet = useWallet();
   const walletModal = useWalletModal();
   const { data: multisigConfig } = useMultisig();
@@ -43,6 +45,7 @@ const AddMemberInput = ({ multisigPda, transactionIndex, programId }: AddMemberI
   const signatureRef = useRef<string>('');
   const [isPending, setIsPending] = useState(false);
   const hasAccess = useAccess();
+
   const addMember = async () => {
     invariant(multisigConfig, 'invalid multisig conf data');
     if (!wallet.publicKey) {
@@ -70,6 +73,7 @@ const AddMemberInput = ({ multisigPda, transactionIndex, programId }: AddMemberI
       creator: wallet.publicKey,
       transactionIndex: bigIntTransactionIndex,
       rentPayer: wallet.publicKey,
+      memo: note.trim() || undefined,
       programId: programId ? new PublicKey(programId) : multisig.PROGRAM_ID,
     });
     const proposalIx = buildProposalIx(
@@ -103,20 +107,23 @@ const AddMemberInput = ({ multisigPda, transactionIndex, programId }: AddMemberI
       throw `Transaction failed or timed out. Check ${signature}`;
     }
     toast.success(`Add member action proposed. (${signature})`, { id: 'transaction' });
+    setNote('');
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['transactions'] }),
       queryClient.invalidateQueries({ queryKey: ['multisig'] }),
     ]);
     navigate('/transactions');
   };
+
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+    <div className="flex flex-col gap-2">
       <Input
         placeholder="Member Public Key"
         onChange={(e) => setMember(e.target.value.trim())}
-        className="w-full sm:flex-1"
+        className="w-full"
       />
-      <div className="flex items-center gap-3">
+      <TransactionNoteInput id="add-member-note" value={note} onChange={setNote} />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="flex shrink-0 gap-3">
           {PERMISSIONS.map(({ label, value }) => (
             <label key={label} className="flex cursor-pointer items-center gap-1.5 text-sm">

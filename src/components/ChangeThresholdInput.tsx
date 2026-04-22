@@ -2,10 +2,10 @@ import { Button } from './ui/button';
 import { formatTransactionError } from '@/lib/utils';
 import { Input } from './ui/input';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { useState, useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import * as multisig from '@sqds/multisig';
-import { Connection, PublicKey, TransactionMessage, VersionedTransaction } from '@solana/web3.js';
+import { PublicKey, TransactionMessage, VersionedTransaction } from '@solana/web3.js';
 import { toast } from 'sonner';
 import { useMultisig } from '../hooks/useServices';
 import invariant from 'invariant';
@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router-dom';
 import { useMultisigData } from '../hooks/useMultisigData';
 import { useAccess } from '../hooks/useAccess';
 import { buildProposalIx } from '../lib/multisigUtils';
+import TransactionNoteInput from './TransactionNoteInput';
 
 type ChangeThresholdInputProps = {
   multisigPda: string;
@@ -26,6 +27,7 @@ const ChangeThresholdInput = ({ multisigPda, transactionIndex }: ChangeThreshold
   const { data: multisigConfig } = useMultisig();
   const hasAccess = useAccess();
   const [threshold, setThreshold] = useState('');
+  const [note, setNote] = useState('');
   const wallet = useWallet();
   const walletModal = useWalletModal();
   const queryClient = useQueryClient();
@@ -53,7 +55,7 @@ const ChangeThresholdInput = ({ multisigPda, transactionIndex }: ChangeThreshold
     if (parseInt(threshold) > totalVoters) {
       return `Threshold cannot exceed ${totalVoters} (total voters).`;
     }
-    return null; // Valid input
+    return null;
   };
 
   const changeThreshold = async () => {
@@ -77,6 +79,7 @@ const ChangeThresholdInput = ({ multisigPda, transactionIndex }: ChangeThreshold
       creator: wallet.publicKey,
       transactionIndex: bigIntTransactionIndex,
       rentPayer: wallet.publicKey,
+      memo: note.trim() || undefined,
       programId: programId ? new PublicKey(programId) : multisig.PROGRAM_ID,
     });
     const proposalIx = buildProposalIx(
@@ -110,18 +113,26 @@ const ChangeThresholdInput = ({ multisigPda, transactionIndex }: ChangeThreshold
       throw `Transaction failed or timed out. Check ${signature}`;
     }
     toast.success(`Threshold change proposed. (${signature})`, { id: 'transaction' });
+    setNote('');
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['transactions'] }),
       queryClient.invalidateQueries({ queryKey: ['multisig'] }),
     ]);
     navigate('/transactions');
   };
+
   return (
     <div>
       <Input
         placeholder={multisigConfig ? multisigConfig.threshold.toString() : ''}
         type="text"
         onChange={(e) => setThreshold(e.target.value.trim())}
+        className="mb-3"
+      />
+      <TransactionNoteInput
+        id="change-threshold-note"
+        value={note}
+        onChange={setNote}
         className="mb-3"
       />
       <Button

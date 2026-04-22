@@ -5,31 +5,20 @@ import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { toast } from 'sonner';
 import { useRpcUrl } from '~/hooks/useSettings'; // Now using React Query!
+import { isValidRpcUrl, normalizeRpcUrl } from '@/lib/rpcUrl';
 
 const SetRpcUrlInput = ({ onUpdate }: { onUpdate?: () => void }) => {
   const { rpcUrl: storedRpcUrl, setRpcUrl } = useRpcUrl(); // Use React Query
   const [rpcUrl, setRpcUrlState] = useState(storedRpcUrl || '');
 
-  const isValidUrl = (url: string) => {
-    const urlPattern = new RegExp(
-      '^(https?:\\/\\/)?' + // validate protocol
-        '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|' + // domain name
-        '((\\d{1,3}\\.){3}\\d{1,3}))' + // OR ip (v4) address
-        '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*' + // port and path
-        '(\\?[;&a-z\\d%_.~+=-]*)?' + // query string
-        '(\\#[-a-z\\d_]*)?$',
-      'i'
-    );
-    return !!urlPattern.test(url);
-  };
-
   const onSubmit = async () => {
-    if (isValidUrl(rpcUrl)) {
-      await setRpcUrl.mutateAsync(rpcUrl); // Use React Query mutation
+    const normalizedRpcUrl = normalizeRpcUrl(rpcUrl);
+    if (normalizedRpcUrl) {
+      await setRpcUrl.mutateAsync(normalizedRpcUrl); // Use React Query mutation
       setRpcUrlState(''); // Clear input field after submission
       if (onUpdate) onUpdate();
     } else {
-      throw 'Please enter a valid URL.';
+      throw 'Please enter a valid HTTP(S) RPC URL.';
     }
   };
 
@@ -37,12 +26,12 @@ const SetRpcUrlInput = ({ onUpdate }: { onUpdate?: () => void }) => {
     <div>
       <Input
         onChange={(e) => setRpcUrlState(e.target.value.trim())}
-        placeholder={storedRpcUrl || 'https://api.mainnet-beta.solana.com'}
+        placeholder={storedRpcUrl || 'https://api.mainnet-beta.solana.com or localhost:8899'}
         value={rpcUrl} // Sync input state with stored value
         className=""
       />
-      {!isValidUrl(rpcUrl) && rpcUrl.length > 0 && (
-        <p className="mt-2 text-xs">Please enter a valid URL.</p>
+      {!isValidRpcUrl(rpcUrl) && rpcUrl.length > 0 && (
+        <p className="mt-2 text-xs">Please enter a valid HTTP(S) RPC URL.</p>
       )}
       <Button
         onClick={() =>
@@ -52,7 +41,7 @@ const SetRpcUrlInput = ({ onUpdate }: { onUpdate?: () => void }) => {
             error: (err) => `${err}`,
           })
         }
-        disabled={!isValidUrl(rpcUrl) && rpcUrl.length > 0}
+        disabled={!isValidRpcUrl(rpcUrl) && rpcUrl.length > 0}
         className="mt-2"
       >
         Set RPC Url

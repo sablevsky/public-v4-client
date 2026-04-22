@@ -2,7 +2,7 @@
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { useState, useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import * as multisig from '@sqds/multisig';
 import { formatTransactionError } from '@/lib/utils';
@@ -21,6 +21,7 @@ import { waitForConfirmation } from '../lib/transactionConfirmation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { buildProposalIx } from '../lib/multisigUtils';
+import TransactionNoteInput from './TransactionNoteInput';
 
 type ChangeUpgradeAuthorityInputProps = {
   programInfos: SimplifiedProgramInfo;
@@ -32,6 +33,7 @@ const ChangeUpgradeAuthorityInput = ({
   transactionIndex,
 }: ChangeUpgradeAuthorityInputProps) => {
   const [newAuthority, setNewAuthority] = useState('');
+  const [note, setNote] = useState('');
   const wallet = useWallet();
   const walletModal = useWalletModal();
   const queryClient = useQueryClient();
@@ -99,6 +101,7 @@ const ChangeUpgradeAuthorityInput = ({
       transactionMessage: transactionMessage,
       transactionIndex: transactionIndexBN,
       addressLookupTableAccounts: [],
+      memo: note.trim() || undefined,
       rentPayer: wallet.publicKey,
       vaultIndex: vaultIndex,
       programId,
@@ -134,18 +137,26 @@ const ChangeUpgradeAuthorityInput = ({
       throw `Transaction failed or timed out. Check ${signature}`;
     }
     toast.success(`Upgrade authority change proposed. (${signature})`, { id: 'transaction' });
+    setNote('');
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['transactions'] }),
       queryClient.invalidateQueries({ queryKey: ['multisig'] }),
     ]);
     navigate('/transactions');
   };
+
   return (
     <div>
       <Input
         placeholder="New Program Authority"
         type="text"
         onChange={(e) => setNewAuthority(e.target.value)}
+        className="mb-3"
+      />
+      <TransactionNoteInput
+        id="change-upgrade-authority-note"
+        value={note}
+        onChange={setNote}
         className="mb-3"
       />
       <Button

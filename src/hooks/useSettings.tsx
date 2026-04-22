@@ -1,12 +1,14 @@
 import * as multisig from '@sqds/multisig';
 // top level
 import { useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
+import { normalizeRpcUrl } from '@/lib/rpcUrl';
 
 const DEFAULT_RPC_URL = 'https://api.mainnet-beta.solana.com'; // Default fallback
 
 const getRpcUrl = () => {
   if (typeof document !== 'undefined') {
-    return localStorage.getItem('x-rpc-url') || DEFAULT_RPC_URL;
+    const storedRpcUrl = localStorage.getItem('x-rpc-url');
+    return storedRpcUrl ? normalizeRpcUrl(storedRpcUrl) || DEFAULT_RPC_URL : DEFAULT_RPC_URL;
   }
   return DEFAULT_RPC_URL;
 };
@@ -21,8 +23,13 @@ export const useRpcUrl = () => {
 
   const setRpcUrl = useMutation({
     mutationFn: (newRpcUrl: string) => {
-      localStorage.setItem(`x-rpc-url`, newRpcUrl);
-      return Promise.resolve(newRpcUrl);
+      const normalizedRpcUrl = normalizeRpcUrl(newRpcUrl);
+      if (!normalizedRpcUrl) {
+        throw new Error('Please enter a valid HTTP(S) RPC URL.');
+      }
+
+      localStorage.setItem(`x-rpc-url`, normalizedRpcUrl);
+      return Promise.resolve(normalizedRpcUrl);
     },
     onSuccess: (newRpcUrl) => {
       queryClient.setQueryData(['rpcUrl'], newRpcUrl);

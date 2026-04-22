@@ -8,7 +8,7 @@ import {
 } from '~/components/ui/dialog';
 import { Button } from './ui/button';
 import { formatTransactionError } from '@/lib/utils';
-import { useState, useRef } from 'react';
+import { useRef, useState } from 'react';
 import * as multisig from '@sqds/multisig';
 import { useWallet } from '@solana/wallet-adapter-react';
 import {
@@ -28,6 +28,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAccess } from '../hooks/useAccess';
 import { waitForConfirmation } from '../lib/transactionConfirmation';
 import { buildProposalIx } from '~/lib/multisigUtils';
+import TransactionNoteInput from './TransactionNoteInput';
 
 type SendSolProps = {
   multisigPda: string;
@@ -41,6 +42,7 @@ const SendSol = ({ multisigPda, vaultIndex }: SendSolProps) => {
   const walletModal = useWalletModal();
   const [amount, setAmount] = useState<string>('');
   const [recipient, setRecipient] = useState('');
+  const [note, setNote] = useState('');
   const { connection, programId } = useMultisigData();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -89,6 +91,7 @@ const SendSol = ({ multisigPda, vaultIndex }: SendSolProps) => {
       transactionMessage: transferMessage,
       transactionIndex: transactionIndexBN,
       addressLookupTableAccounts: [],
+      memo: note.trim() || undefined,
       rentPayer: wallet.publicKey,
       vaultIndex: vaultIndex,
       programId,
@@ -126,6 +129,7 @@ const SendSol = ({ multisigPda, vaultIndex }: SendSolProps) => {
     toast.success(`Transfer proposed. (${signature})`, { id: 'transaction' });
     setAmount('');
     setRecipient('');
+    setNote('');
     closeDialog();
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['transactions'] }),
@@ -165,6 +169,7 @@ const SendSol = ({ multisigPda, vaultIndex }: SendSolProps) => {
         {!isAmountValid && amount.length > 0 && (
           <p className="text-xs text-red-500">Invalid amount</p>
         )}
+        <TransactionNoteInput id="send-sol-note" value={note} onChange={setNote} />
         <Button
           onClick={async () => {
             try {
@@ -176,7 +181,7 @@ const SendSol = ({ multisigPda, vaultIndex }: SendSolProps) => {
               );
             }
           }}
-          disabled={!isPublickey(recipient)}
+          disabled={!isPublickey(recipient) || amount.length < 1 || !isAmountValid}
         >
           Transfer
         </Button>

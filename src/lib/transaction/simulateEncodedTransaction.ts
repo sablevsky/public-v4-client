@@ -1,24 +1,41 @@
 'use client';
 import { toast } from 'sonner';
 import { decodeAndDeserialize } from './decodeAndDeserialize';
-import { Connection, VersionedTransaction } from '@solana/web3.js';
+import { Connection, PublicKey, VersionedTransaction } from '@solana/web3.js';
 import { WalletContextState } from '@solana/wallet-adapter-react';
 import { getAccountsForSimulation } from './getAccountsForSimulation';
 
-export const simulateEncodedTransaction = async (
-  tx: string,
-  connection: Connection,
-  wallet: WalletContextState
-) => {
+export const simulateEncodedTransaction = async ({
+  tx,
+  connection,
+  wallet,
+  additionalLookupTableAddresses = [],
+}: {
+  tx: string;
+  connection: Connection;
+  wallet: WalletContextState;
+  additionalLookupTableAddresses?: PublicKey[];
+}) => {
   if (!wallet.publicKey) {
     throw 'Please connect your wallet.';
   }
   try {
-    const { message, version } = decodeAndDeserialize(tx);
+    const { message, addressLookupTableAccounts } = await decodeAndDeserialize({
+      tx,
+      connection,
+      additionalLookupTableAddresses,
+    });
 
-    const transaction = new VersionedTransaction(message.compileToV0Message());
+    const transaction = new VersionedTransaction(
+      message.compileToV0Message(addressLookupTableAccounts)
+    );
 
-    const keys = await getAccountsForSimulation(connection, transaction, version === 0);
+    const keys = await getAccountsForSimulation(
+      connection,
+      transaction,
+      false,
+      addressLookupTableAccounts
+    );
 
     toast.loading('Simulating...', {
       id: 'simulation',

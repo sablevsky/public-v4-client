@@ -1,7 +1,7 @@
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { useState, useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useWalletModal } from '@solana/wallet-adapter-react-ui';
 import * as multisig from '@sqds/multisig';
 import { formatTransactionError } from '@/lib/utils';
@@ -22,6 +22,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { waitForConfirmation } from '../lib/transactionConfirmation';
 import { buildProposalIx } from '../lib/multisigUtils';
+import TransactionNoteInput from './TransactionNoteInput';
 
 type CreateProgramUpgradeInputProps = {
   programInfos: SimplifiedProgramInfo;
@@ -40,6 +41,7 @@ const CreateProgramUpgradeInput = ({
 
   const [bufferAddress, setBufferAddress] = useState('');
   const [spillAddress, setSpillAddress] = useState('');
+  const [note, setNote] = useState('');
 
   const { connection, multisigAddress, vaultIndex, programId, multisigVault } = useMultisigData();
 
@@ -122,6 +124,7 @@ const CreateProgramUpgradeInput = ({
       transactionMessage: transactionMessage,
       transactionIndex: transactionIndexBN,
       addressLookupTableAccounts: [],
+      memo: note.trim() || undefined,
       rentPayer: wallet.publicKey,
       vaultIndex: vaultIndex,
       programId,
@@ -157,9 +160,11 @@ const CreateProgramUpgradeInput = ({
       throw `Transaction failed or timed out. Check ${signature}`;
     }
     toast.success(`Program upgrade proposed. (${signature})`, { id: 'transaction' });
+    setNote('');
     await queryClient.invalidateQueries({ queryKey: ['transactions'] });
     navigate('/transactions');
   };
+
   return (
     <div>
       <Input
@@ -172,6 +177,12 @@ const CreateProgramUpgradeInput = ({
         placeholder="Buffer Refund (Spill Address)"
         type="text"
         onChange={(e) => setSpillAddress(e.target.value)}
+        className="mb-3"
+      />
+      <TransactionNoteInput
+        id="program-upgrade-note"
+        value={note}
+        onChange={setNote}
         className="mb-3"
       />
       <Button

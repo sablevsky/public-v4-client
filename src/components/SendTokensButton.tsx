@@ -8,7 +8,7 @@ import {
 } from '~/components/ui/dialog';
 import { Button } from './ui/button';
 import { formatTransactionError } from '@/lib/utils';
-import { useState, useRef } from 'react';
+import { useRef, useState } from 'react';
 import {
   createAssociatedTokenAccountIdempotentInstruction,
   createTransferCheckedInstruction,
@@ -28,6 +28,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAccess } from '../hooks/useAccess';
 import { waitForConfirmation } from '../lib/transactionConfirmation';
 import { buildProposalIx } from '~/lib/multisigUtils';
+import TransactionNoteInput from './TransactionNoteInput';
 
 type SendTokensProps = {
   tokenAccount: string;
@@ -50,6 +51,7 @@ const SendTokens = ({
   const walletModal = useWalletModal();
   const [amount, setAmount] = useState<string>('');
   const [recipient, setRecipient] = useState('');
+  const [note, setNote] = useState('');
 
   const { connection } = useMultisigData();
 
@@ -129,6 +131,7 @@ const SendTokens = ({
       transactionMessage: transferMessage,
       transactionIndex: transactionIndexBN,
       addressLookupTableAccounts: [],
+      memo: note.trim() || undefined,
       rentPayer: wallet.publicKey,
       vaultIndex: vaultIndex,
     });
@@ -165,6 +168,7 @@ const SendTokens = ({
     toast.success(`Transfer proposed. (${signature})`, { id: 'transaction' });
     setAmount('');
     setRecipient('');
+    setNote('');
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['transactions'] }),
       queryClient.invalidateQueries({ queryKey: ['multisig'] }),
@@ -210,6 +214,7 @@ const SendTokens = ({
         {!isAmountValid && amount.length > 0 && (
           <p className="text-xs text-red-500">Invalid amount</p>
         )}
+        <TransactionNoteInput id="send-tokens-note" value={note} onChange={setNote} />
         <Button
           onClick={async () => {
             try {
