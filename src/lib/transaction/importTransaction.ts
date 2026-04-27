@@ -11,6 +11,7 @@ import { WalletContextState } from '@solana/wallet-adapter-react';
 import { toast } from 'sonner';
 import { waitForConfirmation } from '~/lib/transactionConfirmation';
 import { buildProposalIx } from '~/lib/multisigUtils';
+import { sendRawWalletTransaction } from '@/lib/sendRawWalletTransaction';
 
 export const importTransaction = async ({
   tx,
@@ -85,8 +86,11 @@ export const importTransaction = async ({
 
     toast.loading('Waiting for wallet approval...', { id: 'transaction', duration: Infinity });
 
-    const signature = await wallet.sendTransaction(transaction, connection, {
+    toast.loading('Sending transaction...', { id: 'transaction', duration: Infinity });
+
+    const signature = await sendRawWalletTransaction(wallet, connection, transaction, {
       skipPreflight: true,
+      preflightCommitment: 'confirmed',
     });
 
     const shortSig = `${signature.slice(0, 8)}...${signature.slice(-4)}`;

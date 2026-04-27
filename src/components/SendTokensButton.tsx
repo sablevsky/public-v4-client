@@ -29,6 +29,7 @@ import { useAccess } from '../hooks/useAccess';
 import { waitForConfirmation } from '../lib/transactionConfirmation';
 import { buildProposalIx } from '~/lib/multisigUtils';
 import TransactionNoteInput from './TransactionNoteInput';
+import { sendRawWalletTransaction } from '@/lib/sendRawWalletTransaction';
 
 type SendTokensProps = {
   tokenAccount: string;
@@ -152,7 +153,7 @@ const SendTokens = ({
 
     toast.loading('Waiting for wallet approval...', { id: 'transaction', duration: Infinity });
 
-    const signature = await wallet.sendTransaction(transaction, connection, {
+    const signature = await sendRawWalletTransaction(wallet, connection, transaction, {
       skipPreflight: true,
     });
     signatureRef.current = signature;

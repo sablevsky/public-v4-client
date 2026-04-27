@@ -11,6 +11,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { waitForConfirmation } from '../lib/transactionConfirmation';
 import { formatTransactionError } from '@/lib/utils';
 import { useRejectButtonState } from '@/hooks/useProposalActions';
+import { sendRawWalletTransaction } from '@/lib/sendRawWalletTransaction';
 
 type RejectButtonProps = {
   multisigPda: string;
@@ -78,7 +79,7 @@ const RejectButton = ({
 
     toast.loading('Waiting for wallet approval...', { id: 'transaction', duration: Infinity });
 
-    const signature = await wallet.sendTransaction(transaction, connection, {
+    const signature = await sendRawWalletTransaction(wallet, connection, transaction, {
       skipPreflight: true,
     });
     signatureRef.current = signature;

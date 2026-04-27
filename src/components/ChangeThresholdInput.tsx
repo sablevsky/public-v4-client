@@ -17,6 +17,7 @@ import { useMultisigData } from '../hooks/useMultisigData';
 import { useAccess } from '../hooks/useAccess';
 import { buildProposalIx } from '../lib/multisigUtils';
 import TransactionNoteInput from './TransactionNoteInput';
+import { sendRawWalletTransaction } from '@/lib/sendRawWalletTransaction';
 
 type ChangeThresholdInputProps = {
   multisigPda: string;
@@ -99,7 +100,7 @@ const ChangeThresholdInput = ({ multisigPda, transactionIndex }: ChangeThreshold
 
     toast.loading('Waiting for wallet approval...', { id: 'transaction', duration: Infinity });
 
-    const signature = await wallet.sendTransaction(transaction, connection, {
+    const signature = await sendRawWalletTransaction(wallet, connection, transaction, {
       skipPreflight: true,
     });
     signatureRef.current = signature;

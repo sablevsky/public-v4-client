@@ -21,6 +21,7 @@ import { useMultisigData } from '@/hooks/useMultisigData';
 import { useMultisigAddress } from '@/hooks/useMultisigAddress';
 import {Link} from "react-router-dom";
 import { waitForConfirmation } from '@/lib/transactionConfirmation';
+import { sendRawWalletTransaction } from '@/lib/sendRawWalletTransaction';
 
 interface MemberAddresses {
   count: number;
@@ -36,7 +37,8 @@ interface CreateSquadFormData {
 }
 
 export default function CreateSquadForm({}: {}) {
-  const { publicKey, connected, sendTransaction } = useWallet();
+  const wallet = useWallet();
+  const { publicKey, connected } = wallet;
 
   const { connection, programId } = useMultisigData();
   const { setMultisigAddress } = useMultisigAddress();
@@ -79,7 +81,7 @@ export default function CreateSquadForm({}: {}) {
 
       toast.loading('Waiting for wallet approval...', { id: 'create', duration: Infinity });
 
-      const signature = await sendTransaction(transaction, connection, {
+      const signature = await sendRawWalletTransaction(wallet, connection, transaction, {
         skipPreflight: true,
         signers: [createKey],
       });

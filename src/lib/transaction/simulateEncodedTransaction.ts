@@ -37,6 +37,19 @@ export const simulateEncodedTransaction = async ({
       addressLookupTableAccounts
     );
 
+    const missingAccounts = (
+      await Promise.all(
+        keys.map(async (key) => {
+          const accountInfo = await connection.getAccountInfo(new PublicKey(key));
+          return accountInfo ? null : key;
+        })
+      )
+    ).filter(Boolean);
+
+    if (missingAccounts.length) {
+      console.error(`Missing accounts on RPC: ${missingAccounts.join(', ')}`);
+    }
+
     toast.loading('Simulating...', {
       id: 'simulation',
     });

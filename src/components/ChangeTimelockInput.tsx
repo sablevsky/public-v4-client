@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { useMultisigData } from '../hooks/useMultisigData';
 import { useAccess } from '../hooks/useAccess';
 import { buildProposalIx } from '../lib/multisigUtils';
+import { sendRawWalletTransaction } from '@/lib/sendRawWalletTransaction';
 
 const MAX_TIME_LOCK = 3 * 30 * 24 * 60 * 60; // 7,776,000 seconds (3 months)
 
@@ -78,7 +79,7 @@ const ChangeTimelockInput = ({
 
     toast.loading('Waiting for wallet approval...', { id: 'transaction', duration: Infinity });
 
-    const signature = await wallet.sendTransaction(transaction, connection, {
+    const signature = await sendRawWalletTransaction(wallet, connection, transaction, {
       skipPreflight: true,
     });
     signatureRef.current = signature;

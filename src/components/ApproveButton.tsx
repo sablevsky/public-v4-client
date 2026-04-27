@@ -10,6 +10,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { waitForConfirmation } from '../lib/transactionConfirmation';
 import { formatTransactionError } from '@/lib/utils';
 import { useApproveButtonState } from '@/hooks/useProposalActions';
+import { sendRawWalletTransaction } from '@/lib/sendRawWalletTransaction';
 
 type ApproveButtonProps = {
   multisigPda: string;
@@ -74,7 +75,7 @@ const ApproveButton = ({
     transaction.add(approveProposalInstruction);
     toast.loading('Waiting for wallet approval...', { id: 'transaction', duration: Infinity });
 
-    const signature = await wallet.sendTransaction(transaction, connection, {
+    const signature = await sendRawWalletTransaction(wallet, connection, transaction, {
       skipPreflight: true,
     });
     signatureRef.current = signature;

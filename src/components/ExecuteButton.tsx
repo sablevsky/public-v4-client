@@ -50,6 +50,13 @@ type ExecuteButtonProps = {
   kind: TransactionKind;
 };
 
+function getMissingSignerAddresses(transaction: VersionedTransaction, signer: PublicKey) {
+  return transaction.message.staticAccountKeys
+    .slice(0, transaction.message.header.numRequiredSignatures)
+    .filter((requiredSigner) => !requiredSigner.equals(signer))
+    .map((requiredSigner) => requiredSigner.toBase58());
+}
+
 const ExecuteButton = ({
   multisigPda,
   transactionIndex,
@@ -177,6 +184,17 @@ const ExecuteButton = ({
           })
         ))
       );
+    }
+
+    for (let i = 0; i < transactions.length; i++) {
+      const label = transactions.length > 1 ? ` (${i + 1}/${transactions.length})` : '';
+      const missingSigners = getMissingSignerAddresses(transactions[i], member);
+
+      if (missingSigners.length) {
+        throw new Error(
+          `Transaction${label} requires signatures that the connected wallet cannot provide: ${missingSigners.join(', ')}`
+        );
+      }
     }
 
     const signedTransactions = await wallet.signAllTransactions(transactions);

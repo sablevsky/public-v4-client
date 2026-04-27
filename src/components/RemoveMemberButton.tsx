@@ -21,6 +21,7 @@ import {
   DialogTrigger,
 } from './ui/dialog';
 import TransactionNoteInput from './TransactionNoteInput';
+import { sendRawWalletTransaction } from '@/lib/sendRawWalletTransaction';
 
 type RemoveMemberButtonProps = {
   multisigPda: string;
@@ -87,7 +88,7 @@ const RemoveMemberButton = ({
 
     toast.loading('Waiting for wallet approval...', { id: 'transaction', duration: Infinity });
 
-    const signature = await wallet.sendTransaction(transaction, connection, {
+    const signature = await sendRawWalletTransaction(wallet, connection, transaction, {
       skipPreflight: true,
     });
     signatureRef.current = signature;

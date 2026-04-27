@@ -18,6 +18,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { buildProposalIx } from '@/lib/multisigUtils';
 import TransactionNoteInput from './TransactionNoteInput';
+import { sendRawWalletTransaction } from '@/lib/sendRawWalletTransaction';
 
 type AddMemberInputProps = {
   multisigPda: string;
@@ -93,7 +94,7 @@ const AddMemberInput = ({ multisigPda, transactionIndex, programId }: AddMemberI
 
     toast.loading('Waiting for wallet approval...', { id: 'transaction', duration: Infinity });
 
-    const signature = await wallet.sendTransaction(transaction, connection, {
+    const signature = await sendRawWalletTransaction(wallet, connection, transaction, {
       skipPreflight: true,
     });
     signatureRef.current = signature;
