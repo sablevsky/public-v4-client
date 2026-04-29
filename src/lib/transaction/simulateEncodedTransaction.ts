@@ -1,7 +1,7 @@
 'use client';
 import { toast } from 'sonner';
 import { decodeAndDeserialize } from './decodeAndDeserialize';
-import { Connection, PublicKey, VersionedTransaction } from '@solana/web3.js';
+import { ComputeBudgetProgram, Connection, PublicKey, VersionedTransaction } from '@solana/web3.js';
 import { WalletContextState } from '@solana/wallet-adapter-react';
 import { getAccountsForSimulation } from './getAccountsForSimulation';
 
@@ -25,6 +25,12 @@ export const simulateEncodedTransaction = async ({
       connection,
       additionalLookupTableAddresses,
     });
+
+    message.instructions.unshift(
+      ComputeBudgetProgram.setComputeUnitLimit({
+        units: 1_400_000,
+      })
+    );
 
     const transaction = new VersionedTransaction(
       message.compileToV0Message(addressLookupTableAccounts)

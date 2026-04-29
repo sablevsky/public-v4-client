@@ -297,6 +297,10 @@ const CreateTransaction = () => {
             </Button>
           )}
         </div>
+        <p className="text-xs text-muted-foreground">
+          Large imported transactions may require multiple wallet approvals: one to create the Squads
+          transaction account and one to create the proposal.
+        </p>
         <button
           onClick={() => getSampleMessage()}
           disabled={!wallet || !wallet.publicKey}
