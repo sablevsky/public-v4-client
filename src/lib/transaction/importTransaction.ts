@@ -132,6 +132,17 @@ const chunkBytes = (bytes: Uint8Array, chunkSize: number) => {
 const sha256 = async (bytes: Uint8Array) =>
   new Uint8Array(await globalThis.crypto.subtle.digest('SHA-256', bytes));
 
+const isTransactionTooLargeError = (error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error);
+
+  return (
+    message.includes('encoding overruns Uint8Array') ||
+    message.includes('VersionedTransaction too large') ||
+    message.includes('Transaction too large') ||
+    message.includes('max: encoded/raw')
+  );
+};
+
 const createBufferedVaultTransaction = async ({
   connection,
   wallet,
@@ -341,9 +352,7 @@ export const importTransaction = async ({
         statusLabel: '1/2 create Squads transaction',
       });
     } catch (error) {
-      const formattedError = String(error);
-
-      if (!formattedError.includes('encoding overruns Uint8Array')) {
+      if (!isTransactionTooLargeError(error)) {
         throw error;
       }
 

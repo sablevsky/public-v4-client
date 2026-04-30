@@ -1,6 +1,7 @@
 import {
   Connection,
   SendOptions,
+  SendTransactionError,
   Signer,
   Transaction,
   VersionedTransaction,
@@ -41,5 +42,20 @@ export async function sendRawWalletTransaction(
 
   const { signers, ...sendOptions } = options ?? {};
 
-  return connection.sendRawTransaction(signedTransaction.serialize(), sendOptions);
+  try {
+    return await connection.sendRawTransaction(signedTransaction.serialize(), sendOptions);
+  } catch (error) {
+    if (error instanceof SendTransactionError) {
+      try {
+        const logs = await error.getLogs(connection);
+        if (logs.length) {
+          error.message = `${error.message}\nLogs:\n${logs.join('\n')}`;
+        }
+      } catch {
+        // Some send errors, such as size-limit failures, do not have retrievable logs.
+      }
+    }
+
+    throw error;
+  }
 }
